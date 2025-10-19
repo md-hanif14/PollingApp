@@ -5,9 +5,23 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 
+// Regex for basic email format validation
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 // POST signup
 router.post('/signup', async (req, res) => {
   const { name, email, password } = req.body;
+
+  // Check Password Length 
+  if (password.length < 6) {
+    return res.status(400).json({ msg: 'Password must be at least 6 characters long.' });
+  }
+
+  // Check Email Format
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ msg: 'Please enter a valid email address.' });
+  }
+
   try {
     let user = await User.findOne({ email });
     if (user) return res.status(400).json({ msg: 'User already exists' });
