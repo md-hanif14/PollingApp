@@ -8,7 +8,8 @@ const Poll = require('../models/Poll');
  */
 router.post('/', auth, async (req, res) => {
   try {
-    const { title, options } = req.body;
+    const { title, options, allowMultipleVotes } = req.body;
+    console.log(allowMultipleVotes, "done");
 
     if (!title || !Array.isArray(options) || options.length < 2) {
       return res.status(400).json({ msg: 'Title and at least 2 options are required' });
@@ -18,6 +19,7 @@ router.post('/', auth, async (req, res) => {
       title,
       options: options.map(text => ({ text })),
       createdBy: req.user.id,
+      allowMultipleVotes: !!allowMultipleVotes,
     });
 
     await poll.save();
@@ -61,38 +63,48 @@ router.get('/:id', async (req, res) => {
  * @route   POST :id/vote
  */
 router.post('/:id/vote', auth, async (req, res) => {
-  const { optionIndex } = req.body;
-  const pollId = req.params.id;
-  const userId = req.user.id;
-
-  if (typeof optionIndex !== 'number') {
-    return res.status(400).json({ msg: 'optionIndex required and must be a number' });
-  }
-
   try {
-    // Validate poll and option index
-    const poll = await Poll.findById(pollId).select('options');
+    const poll = await Poll.findById(req.params.id);
     if (!poll) return res.status(404).json({ msg: 'Poll not found' });
-    if (optionIndex < 0 || optionIndex >= poll.options.length) {
-      return res.status(400).json({ msg: 'Invalid option index' });
+
+    const { optionIndexes } = req.body; // accept array for multiple votes
+    let indexes = Array.isArray(optionIndexes) ? optionIndexes : [req.body.optionIndex];
+
+    if (!indexes || indexes.length === 0) {
+      return res.status(400).json({ msg: 'No options selected' });
     }
 
-    // only add vote if user hasn't already voted
-    const query = { _id: pollId, 'votes.user': { $ne: userId } };
-    const update = { $push: { votes: { user: userId, optionIndex } } };
+    // Check existing votes for this user
+    const userVotes = poll.votes.filter(v => v.user.toString() === req.user.id);
 
-    const updated = await Poll.findOneAndUpdate(query, update, { new: true });
-
-    if (!updated) {
-      const alreadyVoted = await Poll.findOne({ _id: pollId, 'votes.user': userId });
-      if (alreadyVoted) return res.status(400).json({ msg: 'User has already voted' });
-      return res.status(400).json({ msg: 'Could not record vote' });
+    if (!poll.allowMultipleVotes && userVotes.length > 0) {
+      return res.status(400).json({ msg: 'User has already voted' });
     }
 
-    res.json({ msg: 'Vote recorded', poll: updated });
+    // For multiple votes, prevent voting for the same option twice
+    const alreadyVotedOptions = userVotes.map(v => v.optionIndex);
+    const newIndexes = indexes.filter(i => !alreadyVotedOptions.includes(i));
+
+    if (newIndexes.length === 0) {
+      return res.status(400).json({ msg: 'You already voted for these options' });
+    }
+
+    // Record votes
+    newIndexes.forEach(i => {
+      poll.votes.push({ user: req.user.id, optionIndex: i });
+      poll.options[i].votes = (poll.options[i].votes || 0) + 1;
+    });
+
+    await poll.save();
+
+    const updatedPoll = await Poll.findById(poll._id)
+      .populate('createdBy', 'name email')
+      .populate('comments.user', 'name email');
+
+    res.json(updatedPoll);
   } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+    console.error('Vote error:', err);
+    res.status(500).json({ msg: 'Server error' });
   }
 });
 

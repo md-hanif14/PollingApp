@@ -19,10 +19,28 @@ const CommentSchema = new mongoose.Schema({
 
 const PollSchema = new mongoose.Schema({
   title: { type: String, required: true },
-  options: [OptionSchema],
-  votes: [VoteSchema],
-  comments: [CommentSchema],
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
-}, { timestamps: true });
+  options: [
+    {
+      text: String,
+      votes: { type: Number, default: 0 },
+    },
+  ],
+  votes: [
+    {
+      user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      optionIndex: Number,
+    },
+  ],
+  allowMultipleVotes: { type: Boolean, default: false },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  createdAt: { type: Date, default: Date.now },
+  comments: [
+    {
+      text: String,
+      user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      createdAt: { type: Date, default: Date.now },
+    },
+  ],
+});
 
 module.exports = mongoose.model('Poll', PollSchema);

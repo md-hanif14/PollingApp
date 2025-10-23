@@ -16,7 +16,7 @@ const Stack = createNativeStackNavigator();
 
 function AppNav() {
   const { user, loading } = useContext(AuthContext);
-  if (loading) return null; // show spinner if you want
+  if (loading) return null;
   return (
     <NavigationContainer>
       <Stack.Navigator>

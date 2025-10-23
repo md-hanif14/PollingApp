@@ -1,7 +1,6 @@
-// mobile/src/screens/CreatePollScreen.js
+import { TextInput, Button, Text, HelperText, Card, Switch } from 'react-native-paper';
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
-import { TextInput, Button, Headline, HelperText, Card } from 'react-native-paper';
 import api from '../api/api';
 
 export default function CreatePollScreen({ navigation }) {
@@ -9,6 +8,8 @@ export default function CreatePollScreen({ navigation }) {
   const [optionsText, setOptionsText] = useState(''); // user enters options separated by new line or comma
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [allowMultipleVotes, setAllowMultipleVotes] = useState(false);
+
 
   const parseOptions = (text) => {
     // split by new line or comma, trim and remove empties
@@ -25,7 +26,9 @@ export default function CreatePollScreen({ navigation }) {
     setError('');
     setLoading(true);
     try {
-      const res = await api.post('/polls', { title: title.trim(), options });
+      const res = await api.post('/polls', { title: title.trim(), options, allowMultipleVotes });
+      // console.log(res);
+
       setLoading(false);
       navigation.navigate('Home', { newPollId: res.data._id });
     } catch (err) {
@@ -39,7 +42,8 @@ export default function CreatePollScreen({ navigation }) {
     <ScrollView contentContainerStyle={styles.container}>
       <Card style={styles.card}>
         <Card.Content>
-          <Headline style={{ marginBottom: 12 }}>Create New Poll</Headline>
+          <Text variant="headlineMedium" style={{ marginBottom: 12 }}>Create New Poll</Text>
+
           <TextInput
             label="Poll title"
             value={title}
@@ -57,6 +61,14 @@ export default function CreatePollScreen({ navigation }) {
             style={{ marginBottom: 12 }}
           />
           {error ? <HelperText type="error">{error}</HelperText> : null}
+
+          {/* multiple vote option */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 10 }}>
+            <Text style={{ fontSize: 16, marginRight: 8 }}>Allow multiple votes</Text>
+            <Switch value={allowMultipleVotes} onValueChange={setAllowMultipleVotes} />
+          </View>
+
+
           <Button mode="contained" onPress={onCreate} loading={loading} disabled={loading}>
             Create Poll
           </Button>

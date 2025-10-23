@@ -47,11 +47,6 @@ export default function HomeScreen({ navigation, route }) {
         <Button onPress={signOut}>Sign out</Button>
       </View>
 
-      {/* <View style={styles.actionRow}>
-        <Button icon="chart-bar" mode="outlined" onPress={() => navigation.navigate('Results')}>Results</Button>
-        <Button icon="comment" mode="outlined" onPress={() => navigation.navigate('Comments')}>Comments</Button>
-      </View> */}
-
       {loading ? (
         <ActivityIndicator animating size="large" style={{ marginTop: 32 }} />
       ) : (
